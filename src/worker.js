@@ -21,7 +21,7 @@ function sendTelegramMessage(message) {
         text: message
       })
     });
-  }
+}
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -109,6 +109,28 @@ export default {
         return Response.json({ error: err.message }, { status: 500 });
       }
     }
+    // POST /participate -- participate to an event
+    if (url.pathname === "/participate" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const { userId, eventId } = body;
+
+        if (userId == null || eventId == null) {
+          return Response.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        const result = await env.DB.prepare("INSERT INTO Partecipanti (UserId, EventId) VALUES (?,?)")
+          .bind(userId, eventId)
+          .run();
+
+        if (result.success) {
+          return Response.json({ response: "Participate added successfully" }, { status: 201 });
+        }
+        return Response.json({ messresponseage: "Participate added failed" }, { status: 500 });
+      } catch (err) {
+        return Response.json({ error: err.message }, { status: 500 });
+      }
+    }
     // POST /placeexists -- check if an event exists at lat/lon and return its data
     if (url.pathname === "/placeexists" && request.method === "POST") {
       try {       
@@ -125,6 +147,12 @@ export default {
           .first();
 
         if (row) {
+          const participants = await env.DB.prepare(
+            "SELECT p.UserId AS id, u.nome AS name FROM Partecipanti p JOIN User u ON p.UserId = u.id WHERE p.EventId = ?"
+          )
+            .bind(row.id)
+            .all();
+
           return Response.json({
             exists: true,
             event: {
@@ -134,7 +162,11 @@ export default {
               date: row.date,
               time: row.time,
               lat: row.lat,
-              lon: row.lon
+              lon: row.lon,
+              participants: participants.results.map(p => ({
+                id: p.id,
+                name: p.name || "Unknown"
+              }))
             }
           }, { status: 200 });
         } else {
