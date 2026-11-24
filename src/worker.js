@@ -12,7 +12,6 @@ function getDistanceInKm(lat1, lon1, lat2, lon2) {
 }
 
 function sendTelegramMessage(message) {
-    const key = "a4d706ae3506b2b45776ef253358f094";
     fetch(`https://api.telegram.org/bot8642017775:AAFAxONiblY8Yg0bxWS42QleMLnNOnveoFI/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
